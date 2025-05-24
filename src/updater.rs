@@ -11,12 +11,11 @@ use crate::credentials::AwsCredentials;
 pub struct AwsMfaUpdater {
     path: PathBuf,
     credentials: AwsCredentials,
-    region: String,
     duration: u32,
 }
 
 impl AwsMfaUpdater {
-    pub fn new(path: Option<PathBuf>, region: String, duration: u32) -> Result<Self> {
+    pub async fn new(path: Option<PathBuf>, duration: u32) -> Result<Self> {
         let path = path
             .or_else(|| dirs::home_dir().map(|d| d.join(".aws").join("credentials")))
             .context("Could not determine home directory")?;
@@ -33,15 +32,15 @@ impl AwsMfaUpdater {
             get("aws_mfa_device")?,
         );
 
-        Ok(Self { path, credentials, region, duration })
+        Ok(Self { path, credentials, duration })
     }
 
     pub async fn update_credentials(&self, token: &str) -> Result<()> {
-        info!("Fetching credentials - Duration: {}s, Region: {}", self.duration, self.region);
+        info!("Fetching credentials - Duration: {}s", self.duration);
 
         let session = self
             .credentials
-            .get_session_token(token, &self.region, self.duration)
+            .get_session_token(token, self.duration)
             .await?;
         let access_key_id = session.access_key_id();
         let secret_access_key = session.secret_access_key();

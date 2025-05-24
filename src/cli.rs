@@ -9,9 +9,6 @@ pub struct Args {
     #[arg(short, long, env = "AWS_SHARED_CREDENTIALS_FILE")]
     pub credentials_path: Option<PathBuf>,
 
-    /// AWS region
-    #[arg(short, long, env = "AWS_DEFAULT_REGION", default_value = "ap-northeast-1")]
-    pub region: String,
 
     /// Session duration in seconds
     #[arg(short, long, env = "AWS_SESSION_DURATION", default_value = "43200")]

@@ -15,7 +15,6 @@ aws-mfa [OPTIONS]
 
 Options:
   -c, --credentials-path <CREDENTIALS_PATH> Path to AWS credentials file [env: AWS_SHARED_CREDENTIALS_FILE]
-  -r, --region <REGION>                     AWS region [env: AWS_DEFAULT_REGION] [default: ap-northeast-1]
   -d, --duration <DURATION>                 Session duration in seconds [env: AWS_SESSION_DURATION] [default: 43200]
       --op-account <OP_ACCOUNT>             1Password account (e.g., yourcompany.1password.com) [env: AWS_MFA_UPDATER_OP_ACCOUNT]
       --op-item-name <OP_ITEM_NAME>         1Password item name containing MFA token [env: AWS_MFA_UPDATER_OP_ITEM_NAME]
@@ -30,10 +29,14 @@ You can configure the tool using environment variables:
 | Variable                       | Description                              | Default              |
 |--------------------------------|------------------------------------------|----------------------|
 | `AWS_SHARED_CREDENTIALS_FILE`  | Path to AWS credentials file             | `~/.aws/credentials` |
-| `AWS_DEFAULT_REGION`           | AWS region                               | `ap-northeast-1`     |
 | `AWS_SESSION_DURATION`         | Session duration in seconds              | `43200`              |
 | `AWS_MFA_UPDATER_OP_ACCOUNT`   | 1Password account URL                    | -                    |
 | `AWS_MFA_UPDATER_OP_ITEM_NAME` | 1Password item name containing MFA token | -                    |
+
+The AWS region is automatically detected from:
+- Environment variables (`AWS_DEFAULT_REGION`, `AWS_REGION`)
+- AWS config file (`~/.aws/config`)
+- EC2 instance metadata (when running on AWS)
 
 ## Prerequisites
 

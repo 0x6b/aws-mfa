@@ -2,8 +2,8 @@ use std::fmt;
 
 use anyhow::{Context, Result};
 use aws_sdk_sts::{
-    Client, Config,
-    config::{Credentials, Region},
+    Client,
+    config::Credentials,
     types,
 };
 
@@ -24,24 +24,23 @@ impl AwsCredentials {
     pub async fn get_session_token(
         &self,
         token: &str,
-        region: &str,
         duration: u32,
     ) -> Result<types::Credentials> {
-        Client::from_conf(
-            Config::builder()
-                .region(Region::new(region.to_string()))
-                .credentials_provider(self.credentials.clone())
-                .build(),
-        )
-        .get_session_token()
-        .duration_seconds(duration as i32)
-        .serial_number(&self.mfa_device)
-        .token_code(token)
-        .send()
-        .await?
-        .credentials()
-        .cloned()
-        .context("No credentials returned")
+        let config = aws_config::from_env()
+            .credentials_provider(self.credentials.clone())
+            .load()
+            .await;
+        
+        Client::new(&config)
+            .get_session_token()
+            .duration_seconds(duration as i32)
+            .serial_number(&self.mfa_device)
+            .token_code(token)
+            .send()
+            .await?
+            .credentials()
+            .cloned()
+            .context("No credentials returned")
     }
 }
 

@@ -19,13 +19,12 @@ async fn main() -> Result<()> {
 
     let Args {
         credentials_path,
-        region,
         duration,
         op_account,
         op_item_name,
     } = Args::parse();
 
-    let updater = AwsMfaUpdater::new(credentials_path, region, duration)?;
+    let updater = AwsMfaUpdater::new(credentials_path, duration).await?;
     let token = get_mfa_token(op_account, op_item_name)?;
     updater.update_credentials(&token).await
 }
