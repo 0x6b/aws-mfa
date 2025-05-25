@@ -2,6 +2,9 @@
 
 A Rust CLI tool for refreshing AWS session credentials using Multi-Factor Authentication (MFA).
 
+> [!CAUTION]
+> This tool is designed for my specific use case and may not work with your setup. It will delete your `~/.aws/credentials` without prior confirmation. Use it at your own risk, or consider using other tools like [jhandguy/aws-mfa](https://github.com/jhandguy/aws-mfa) and [eegli/mfaws](https://github.com/eegli/mfaws).
+
 ## Features
 
 - Refresh AWS session credentials using MFA
@@ -27,13 +30,14 @@ Options:
 You can configure the tool using environment variables:
 
 | Variable                       | Description                              | Default              |
-|--------------------------------|------------------------------------------|----------------------|
+| ------------------------------ | ---------------------------------------- | -------------------- |
 | `AWS_SHARED_CREDENTIALS_FILE`  | Path to AWS credentials file             | `~/.aws/credentials` |
 | `AWS_SESSION_DURATION`         | Session duration in seconds              | `43200`              |
 | `AWS_MFA_UPDATER_OP_ACCOUNT`   | 1Password account URL                    | -                    |
 | `AWS_MFA_UPDATER_OP_ITEM_NAME` | 1Password item name containing MFA token | -                    |
 
 The AWS region is automatically detected from:
+
 - Environment variables (`AWS_DEFAULT_REGION`, `AWS_REGION`)
 - AWS config file (`~/.aws/config`)
 - EC2 instance metadata (when running on AWS)
