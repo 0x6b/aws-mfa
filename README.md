@@ -3,7 +3,7 @@
 A Rust CLI tool for refreshing AWS session credentials using Multi-Factor Authentication (MFA).
 
 > [!CAUTION]
-> This tool is designed for my specific use case and may not work with your setup. It will delete your `~/.aws/credentials` without prior confirmation. Use it at your own risk, or consider using other tools like [jhandguy/aws-mfa](https://github.com/jhandguy/aws-mfa) and [eegli/mfaws](https://github.com/eegli/mfaws).
+> This tool is designed for my specific use case and may not work with your setup. It will delete settings in your `~/.aws/credentials` without prior confirmation. Use it at your own risk, or consider using other capable tools like [jhandguy/aws-mfa](https://github.com/jhandguy/aws-mfa) and [eegli/mfaws](https://github.com/eegli/mfaws).
 
 ## Features
 
