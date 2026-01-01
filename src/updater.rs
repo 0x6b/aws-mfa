@@ -39,8 +39,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, anyhow, ensure};
 use aws_smithy_types::date_time::Format;
 use configparser::ini::Ini;
+use dirs::home_dir;
 use log::info;
-use tokio::fs;
+use tokio::fs::write;
 
 use crate::credentials::AwsCredentials;
 
@@ -77,8 +78,8 @@ impl AwsMfaUpdater {
     ///
     /// * `path` - Optional path to the AWS credentials file. If `None`, defaults to
     ///   `~/.aws/credentials` following AWS CLI conventions.
-    /// * `duration` - Duration in seconds for session token validity. Must be between
-    ///   900 seconds (15 minutes) and 129,600 seconds (36 hours) as per AWS STS limits.
+    /// * `duration` - Duration in seconds for session token validity. Must be between 900 seconds
+    ///   (15 minutes) and 129,600 seconds (36 hours) as per AWS STS limits.
     ///
     /// # Returns
     ///
@@ -113,9 +114,9 @@ impl AwsMfaUpdater {
         // Resolve credentials file path: use provided path or default to ~/.aws/credentials
         // This follows the AWS CLI standard location for credentials
         let path = path
-            .or_else(|| dirs::home_dir().map(|d| d.join(".aws").join("credentials")))
+            .or_else(|| home_dir().map(|d| d.join(".aws").join("credentials")))
             .context("Could not determine home directory")?;
-        
+
         // Ensure the credentials file exists before attempting to parse it
         // This provides a clear error message if the file is missing
         ensure!(path.exists(), "Credentials file not found");
@@ -128,15 +129,18 @@ impl AwsMfaUpdater {
 
         // Helper closure to extract required fields from the [default-long-term] profile
         // This profile contains the permanent IAM user credentials used for MFA authentication
-        let get = |f| ini.get("default-long-term", f).context(format!("Missing config field: {f}"));
-        
+        let get = |f| {
+            ini.get("default-long-term", f)
+                .context(format!("Missing config field: {f}"))
+        };
+
         // Load the long-term credentials from the INI file
         // These are the permanent IAM user credentials that will be used to assume
         // temporary credentials via STS GetSessionToken with MFA
         let credentials = AwsCredentials::new(
-            get("aws_access_key_id")?,      // IAM user access key (AKIA...)
-            get("aws_secret_access_key")?,  // IAM user secret access key
-            get("aws_mfa_device")?,         // MFA device ARN
+            get("aws_access_key_id")?,     // IAM user access key (AKIA...)
+            get("aws_secret_access_key")?, // IAM user secret access key
+            get("aws_mfa_device")?,        // MFA device ARN
         );
 
         Ok(Self { path, credentials, duration })
@@ -153,8 +157,9 @@ impl AwsMfaUpdater {
     ///
     /// # Arguments
     ///
-    /// * `token` - The current MFA token code (6-digit number from authenticator app or hardware device)
-    ///   This token must be valid and current (typically valid for 30 seconds from generation)
+    /// * `token` - The current MFA token code (6-digit number from authenticator app or hardware
+    ///   device) This token must be valid and current (typically valid for 30 seconds from
+    ///   generation)
     ///
     /// # Returns
     ///
@@ -186,11 +191,11 @@ impl AwsMfaUpdater {
     /// use aws_mfa::updater::AwsMfaUpdater;
     ///
     /// let updater = AwsMfaUpdater::new(None, 3600)?;
-    /// 
+    ///
     /// // Get current MFA token from authenticator app (e.g., "123456")
     /// let mfa_token = "123456";
     /// updater.update_credentials(mfa_token).await?;
-    /// 
+    ///
     /// // AWS tools can now use the updated credentials from [default] profile
     /// ```
     pub async fn update_credentials(&self, token: &str) -> Result<()> {
@@ -199,16 +204,13 @@ impl AwsMfaUpdater {
         // Request temporary session tokens from AWS STS using long-term credentials + MFA
         // This is the core operation that exchanges permanent credentials + MFA token
         // for temporary, time-limited credentials that don't require MFA for subsequent use
-        let session = self
-            .credentials
-            .get_session_token(token, self.duration)
-            .await?;
-        
+        let session = self.credentials.get_session_token(token, self.duration).await?;
+
         // Extract the temporary credential components from the STS response
         // These will be used to replace the [default] profile in the credentials file
-        let access_key_id = session.access_key_id();          // Temporary access key (starts with ASIA)
-        let secret_access_key = session.secret_access_key();  // Temporary secret access key
-        let session_token = session.session_token();          // Session token (required for temporary creds)
+        let access_key_id = session.access_key_id(); // Temporary access key (starts with ASIA)
+        let secret_access_key = session.secret_access_key(); // Temporary secret access key
+        let session_token = session.session_token(); // Session token (required for temporary creds)
         let expiration = session.expiration().fmt(Format::DateTime)?; // When these credentials expire
 
         // Build the complete credentials file content with both profiles
@@ -224,9 +226,10 @@ expiration={expiration}
 [default-long-term]
 {}
 ",
-            self.credentials,  // This expands to the formatted long-term credentials via Display trait
+            self.credentials, /* This expands to the formatted long-term credentials via Display
+                               * trait */
         );
-        
+
         // Note: We include both aws_session_token and aws_security_token for maximum compatibility:
         // - aws_session_token: Modern AWS SDKs prefer this field
         // - aws_security_token: Legacy compatibility for older SDKs and tools
@@ -235,7 +238,7 @@ expiration={expiration}
         // Atomically write the new credentials file
         // This ensures that the file is never in a partially-written state that could
         // cause authentication failures for concurrent AWS operations
-        fs::write(&self.path, content).await?;
+        write(&self.path, content).await?;
         info!("Success! Credentials expire at: {expiration}");
 
         Ok(())

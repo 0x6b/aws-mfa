@@ -24,14 +24,11 @@
 //! # }
 //! ```
 
-use std::fmt;
+use std::{fmt, fmt::Formatter};
 
 use anyhow::{Context, Result};
-use aws_sdk_sts::{
-    Client,
-    config::Credentials,
-    types,
-};
+use aws_config::from_env;
+use aws_sdk_sts::{Client, config::Credentials, types};
 
 /// AWS credentials wrapper that includes MFA device information.
 ///
@@ -73,8 +70,9 @@ impl AwsCredentials {
     /// # Arguments
     ///
     /// * `access_key_id` - The AWS Access Key ID for authentication
-    /// * `secret_access_key` - The AWS Secret Access Key for authentication  
-    /// * `mfa_device` - The ARN of the MFA device (e.g., `"arn:aws:iam::123456789012:mfa/username"`)
+    /// * `secret_access_key` - The AWS Secret Access Key for authentication
+    /// * `mfa_device` - The ARN of the MFA device (e.g.,
+    ///   `"arn:aws:iam::123456789012:mfa/username"`)
     ///
     /// # Returns
     ///
@@ -112,10 +110,10 @@ impl AwsCredentials {
     ///
     /// # Returns
     ///
-    /// * `Ok(types::Credentials)` - Temporary AWS credentials containing access key ID,
-    ///   secret access key, and session token
-    /// * `Err(anyhow::Error)` - If the STS call fails, MFA token is invalid, or no credentials
-    ///   are returned
+    /// * `Ok(types::Credentials)` - Temporary AWS credentials containing access key ID, secret
+    ///   access key, and session token
+    /// * `Err(anyhow::Error)` - If the STS call fails, MFA token is invalid, or no credentials are
+    ///   returned
     ///
     /// # Errors
     ///
@@ -141,7 +139,7 @@ impl AwsCredentials {
     /// // Get 1-hour session token using MFA code "123456"
     /// let session_creds = creds.get_session_token("123456", 3600).await?;
     ///
-    /// println!("Temporary Access Key: {}", 
+    /// println!("Temporary Access Key: {}",
     ///          session_creds.access_key_id().unwrap_or("N/A"));
     /// # Ok(())
     /// # }
@@ -151,14 +149,12 @@ impl AwsCredentials {
         token: &str,
         duration: u32,
     ) -> Result<types::Credentials> {
-        let config = aws_config::from_env()
-            .credentials_provider(self.credentials.clone())
-            .load()
-            .await;
-        
-        let duration_i32 = duration.try_into()
+        let config = from_env().credentials_provider(self.credentials.clone()).load().await;
+
+        let duration_i32 = duration
+            .try_into()
             .context("Duration value is too large to convert to i32")?;
-        
+
         Client::new(&config)
             .get_session_token()
             .duration_seconds(duration_i32)
@@ -212,7 +208,7 @@ impl AwsCredentials {
 /// // aws_mfa_device=arn:aws:iam::123456789012:mfa/user
 /// ```
 impl fmt::Display for AwsCredentials {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "aws_access_key_id={}\naws_secret_access_key={}\naws_mfa_device={}",

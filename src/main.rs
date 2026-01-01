@@ -20,6 +20,8 @@ mod cli;
 mod credentials;
 mod updater;
 
+use std::io::{stdin, stdout};
+
 use cli::Args;
 use updater::AwsMfaUpdater;
 
@@ -59,10 +61,10 @@ async fn main() -> Result<()> {
 
     // Initialize the AWS MFA updater with the specified credentials path and duration
     let updater = AwsMfaUpdater::new(credentials_path, duration)?;
-    
+
     // Retrieve MFA token using the configured method (1Password or manual input)
     let token = get_mfa_token(op_account, op_item_name)?;
-    
+
     // Update AWS credentials with the new session tokens
     updater.update_credentials(&token).await
 }
@@ -92,7 +94,7 @@ async fn main() -> Result<()> {
 /// ```
 /// // Automated retrieval with 1Password
 /// let token = get_mfa_token(Some("work".to_string()), Some("aws-mfa".to_string()))?;
-/// 
+///
 /// // Manual input fallback
 /// let token = get_mfa_token(None, None)?;
 /// ```
@@ -108,7 +110,7 @@ fn get_mfa_token(op_account: Option<String>, op_item_name: Option<String>) -> Re
             // Check if the command executed successfully (exit code 0)
             if output.status.success() {
                 let otp = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                
+
                 // Validate OTP format: must be exactly 6 ASCII digits
                 // This prevents invalid tokens from being used and provides early validation
                 if otp.len() == 6 && otp.chars().all(|c| c.is_ascii_digit()) {
@@ -124,14 +126,14 @@ fn get_mfa_token(op_account: Option<String>, op_item_name: Option<String>) -> Re
 
     // Manual input fallback - prompt user for MFA token
     print!("Enter AWS MFA code for device: ");
-    
+
     // Ensure prompt is immediately visible by flushing stdout buffer
-    std::io::stdout().flush()?;
-    
+    stdout().flush()?;
+
     // Read user input from stdin
     let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    
+    stdin().read_line(&mut input)?;
+
     // Return trimmed input to remove trailing newline and whitespace
     Ok(input.trim().to_string())
 }
